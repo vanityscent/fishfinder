@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fish Finder - 날씨 기반 어종 추천</title>
+    <style>
+        :root {
+            --primary-color: #2c5aa0;
+            --secondary-color: #4a90e2;
+            --accent-color: #f39c12;
+            --success-color: #27ae60;
+            --warning-color: #e74c3c;
+            --text-color: #2c3e50;
+            --bg-color: #ecf0f1;
+            --card-bg: #ffffff;
+            --border-color: #bdc3c7;
+            --shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        [data-theme="dark"] {
+            --text-color: #ecf0f1;
+            --bg-color: #2c3e50;
+            --card-bg: #34495e;
+            --border-color: #4a5568;
+            --shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem 0;
+            box-shadow: var(--shadow);
+        }
+
+        .header-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            text-align: center;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+            align-items: flex-end;
+            margin-top: 1rem;
+            max-width: 100%;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-width: 150px;
+            flex: 0 0 auto;
+        }
+
+        .season-display {
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: var(--text-color);
+            box-sizing: border-box;
+        }
+
+        .season-display.spring {
+            border-color: #4CAF50;
+            background: #E8F5E8;
+            color: #2E7D32;
+        }
+
+        .season-display.summer {
+            border-color: #FF9800;
+            background: #FFF3E0;
+            color: #E65100;
+        }
+
+        .season-display.autumn {
+            border-color: #FF5722;
+            background: #FBE9E7;
+            color: #D84315;
+        }
+
+        .season-display.winter {
+            border-color: #2196F3;
+            background: #E3F2FD;
+            color: #1565C0;
+        }
+
+        .tide-display {
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: var(--text-color);
+            box-sizing: border-box;
+        }
+
+        .tide-display.good {
+            border-color: #4CAF50;
+            background: #E8F5E8;
+            color: #2E7D32;
+        }
+
+        .tide-display.excellent {
+            border-color: #FFD700;
+            background: #FFFDE7;
+            color: #F57F17;
+            animation: pulse 2s infinite;
+        }
+
+        .tide-display.difficult {
+            border-color: #F44336;
+            background: #FFEBEE;
+            color: #C62828;
+        }
+
+        .tide-display.poor {
+            border-color: #9E9E9E;
+            background: #F5F5F5;
+            color: #616161;
+        }
+
+        .tide-display.unknown {
+            border-color: #607D8B;
+            background: #ECEFF1;
+            color: #455A64;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        label {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        input, select, button {
+            padding: 0.75rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            height: 48px;
+            box-sizing: border-box;
+        }
+
+        input:focus, select:focus, button:focus-visible {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(243, 144, 18, 0.2);
+        }
+
+        .btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            min-width: 120px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            background: #e67e22;
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: var(--secondary-color);
+        }
+
+        .btn-secondary:hover {
+            background: #357abd;
+        }
+
+        /* Main Content */
+        main {
+            padding: 2rem 0;
+            min-height: 60vh;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            font-size: 1.2rem;
+            color: var(--text-color);
+        }
+
+        .spinner {
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--accent-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .weather-section {
+            margin-bottom: 2rem;
+        }
+
+        .weather-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            margin-bottom: 1rem;
+        }
+
+        .weather-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .location {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .weather-main {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .weather-item {
+            text-align: center;
+            padding: 1rem;
+            background: var(--bg-color);
+            border-radius: 8px;
+        }
+
+        .weather-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .weather-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 0.25rem;
+        }
+
+        .fish-section {
+            margin-top: 2rem;
+        }
+
+        .fish-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .fish-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            transition: transform 0.3s ease;
+        }
+
+        .fish-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .fish-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .fish-reason {
+            color: var(--text-color);
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+
+        .fish-tips {
+            background: var(--bg-color);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .fish-tips h4 {
+            color: var(--accent-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .fish-tips ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .fish-tips li {
+            padding: 0.25rem 0;
+            position: relative;
+            padding-left: 1.5rem;
+        }
+
+        .fish-tips li::before {
+            content: "🎣";
+            position: absolute;
+            left: 0;
+        }
+
+        .tide-tip {
+            background: #E3F2FD;
+            border: 1px solid #2196F3;
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-top: 0.75rem;
+            color: #1565C0;
+            font-size: 0.9rem;
+        }
+
+        .tide-info {
+            background: var(--bg-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .tide-info h4 {
+            color: var(--accent-color);
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .tide-info p {
+            margin: 0.25rem 0;
+            line-height: 1.4;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        [data-theme="dark"] .warning {
+            background: #664d03;
+            border-color: #997404;
+            color: #fff3cd;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--card-bg);
+            border-top: 1px solid var(--border-color);
+            padding: 2rem 0;
+            margin-top: 3rem;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .footer-links a {
+            color: var(--text-color);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent-color);
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            box-shadow: var(--shadow);
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            max-width: 400px;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--warning-color);
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success-color);
+        }
+
+        .toast-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header-content {
+                padding: 0 1rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .controls {
+                flex-direction: column;
+                width: 100%;
+                align-items: stretch;
+            }
+
+            .input-group {
+                width: 100%;
+                min-width: auto;
+            }
+
+            input, select, button {
+                width: 100%;
+                height: 48px;
+            }
+
+            .weather-main {
+                grid-template-columns: 1fr;
+            }
+
+            .fish-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+
+        /* Dark mode toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        /* Utility classes */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .mb-1 { margin-bottom: 0.5rem; }
+        .mb-2 { margin-bottom: 1rem; }
+        .mb-3 { margin-bottom: 1.5rem; }
+        .mt-1 { margin-top: 0.5rem; }
+        .mt-2 { margin-top: 1rem; }
+        .mt-3 { margin-top: 1.5rem; }
+    </style>
+</head>
+<body>
+    <div class="theme-toggle" onclick="toggleTheme()" aria-label="다크 모드 토글" role="button" tabindex="0">
+        <span id="theme-icon">🌙</span>
+    </div>
+
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <h1>🎣 Fish Finder</h1>
+                <p class="subtitle">날씨와 위치 기반 최적의 어종 추천 서비스</p>
+                
+                <div class="controls">
+                    <div class="input-group">
+                        <label for="environment">낚시 환경</label>
+                        <select id="environment" aria-label="낚시 환경 선택">
+                            <option value="sea">바다</option>
+                            <option value="freshwater">민물</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="season-display">현재 계절</label>
+                        <div id="season-display" class="season-display">
+                            <span id="current-season">계절 확인 중...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="tide-display">물때 정보</label>
+                        <div id="tide-display" class="tide-display">
+                            <span id="current-tide">물때 확인 중...</span>
+                        </div>
+                    </div>
+                    
+                    <button class="btn" onclick="getLocation()" aria-label="현재 위치 가져오기">
+                        📍 내 위치
+                    </button>
+                    
+                    <button class="btn btn-secondary" onclick="refreshData()" aria-label="데이터 새로고침">
+                        🔄 새로고침
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <p>날씨 정보를 가져오는 중...</p>
+            </div>
+
+            <div id="content" class="hidden">
+                <section class="weather-section" aria-labelledby="weather-heading">
+                    <h2 id="weather-heading" class="hidden">현재 날씨 정보</h2>
+                    <div id="weather-card" class="weather-card"></div>
+                </section>
+
+                <section class="fish-section" aria-labelledby="fish-heading">
+                    <h2 id="fish-heading">추천 어종</h2>
+                    <div id="fish-grid" class="fish-grid"></div>
+                </section>
+            </div>
+
+            <div id="error-message" class="hidden">
+                <div class="weather-card text-center">
+                    <h3>오류가 발생했습니다</h3>
+                    <p id="error-text"></p>
+                    <button class="btn mt-2" onclick="retry()">다시 시도</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div>
+                    <p>&copy; 2024 Fish Finder. 날씨 데이터 제공: <a href="https://openweathermap.org" target="_blank" rel="noopener">OpenWeatherMap</a></p>
+                </div>
+                <div class="footer-links">
+                    <button class="btn btn-secondary" onclick="copyLink()" aria-label="현재 결과 링크 복사">🔗 링크 복사</button>
+                    <a href="#" onclick="toggleTheme()" aria-label="다크 모드 토글">🌙 테마 변경</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Global variables
+        let currentLocation = null;
+        let weatherData = null;
+        let fishRecommendations = null;
+        const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+        // Fish species database
+        const fishDatabase = {
+            sea: {
+                spring: [
+                    { name: "전갱이", temp: [15, 25], wind: [0, 10], reason: "봄철 수온 상승과 함께 활발해지는 어종", tips: ["새우나 작은 생선을 미끼로 사용", "얕은 바위 지역에서 낚시", "새벽과 저녁 시간대가 좋음"] },
+                    { name: "갈치", temp: [18, 28], wind: [0, 8], reason: "봄철 회유 시기로 활발한 어종", tips: ["생선 조각이나 오징어를 미끼로", "깊은 바다에서 낚시", "조류가 강한 지역 선호"] },
+                    { name: "광어", temp: [12, 22], wind: [0, 12], reason: "봄철 산란기로 연안에 접근", tips: ["갯지렁이나 새우를 미끼로", "모래 바닥 지역에서 낚시", "조수 간만의 차가 큰 시간"] },
+                    { name: "우럭", temp: [10, 20], wind: [0, 15], reason: "봄철 수온 상승으로 활발해짐", tips: ["갯지렁이나 작은 생선을 미끼로", "바위 지역에서 낚시", "조류가 있는 지역 선호"] },
+                    { name: "돔", temp: [14, 24], wind: [0, 10], reason: "봄철 산란기로 연안 접근", tips: ["새우나 갯지렁이를 미끼로", "얕은 바위 지역에서 낚시", "조수 간만의 차가 큰 시간"] }
+                ],
+                summer: [
+                    { name: "전갱이", temp: [20, 30], wind: [0, 12], reason: "여름철 높은 수온에서 활발한 어종", tips: ["새우나 작은 생선을 미끼로 사용", "얕은 바위 지역에서 낚시", "새벽과 저녁 시간대가 좋음"] },
+                    { name: "갈치", temp: [22, 32], wind: [0, 10], reason: "여름철 회유 시기로 활발한 어종", tips: ["생선 조각이나 오징어를 미끼로", "깊은 바다에서 낚시", "조류가 강한 지역 선호"] },
+                    { name: "고등어", temp: [18, 28], wind: [0, 15], reason: "여름철 대량 회유하는 어종", tips: ["새우나 작은 생선을 미끼로", "바위 지역에서 낚시", "조류가 있는 지역 선호"] },
+                    { name: "돔", temp: [20, 30], wind: [0, 12], reason: "여름철 높은 수온에서 활발", tips: ["새우나 갯지렁이를 미끼로", "얕은 바위 지역에서 낚시", "조수 간만의 차가 큰 시간"] },
+                    { name: "광어", temp: [16, 26], wind: [0, 15], reason: "여름철 연안에서 활발한 어종", tips: ["갯지렁이나 새우를 미끼로", "모래 바닥 지역에서 낚시", "조류가 있는 지역 선호"] }
+                ],
+                autumn: [
+                    { name: "갈치", temp: [16, 26], wind: [0, 12], reason: "가을철 회유 시기로 활발한 어종", tips: ["생선 조각이나 오징어를 미끼로", "깊은 바다에서 낚시", "조류가 강한 지역 선호"] },
+                    { name: "전갱이", temp: [14, 24], wind: [0, 15], reason: "가을철 수온 하강과 함께 활발", tips: ["새우나 작은 생선을 미끼로 사용", "얕은 바위 지역에서 낚시", "새벽과 저녁 시간대가 좋음"] },
+                    { name: "우럭", temp: [12, 22], wind: [0, 18], reason: "가을철 수온 하강으로 활발해짐", tips: ["갯지렁이나 작은 생선을 미끼로", "바위 지역에서 낚시", "조류가 있는 지역 선호"] },
+                    { name: "광어", temp: [10, 20], wind: [0, 15], reason: "가을철 산란기로 연안 접근", tips: ["갯지렁이나 새우를 미끼로", "모래 바닥 지역에서 낚시", "조수 간만의 차가 큰 시간"] },
+                    { name: "돔", temp: [12, 22], wind: [0, 12], reason: "가을철 수온 하강으로 활발", tips: ["새우나 갯지렁이를 미끼로", "얕은 바위 지역에서 낚시", "조류가 있는 지역 선호"] }
+                ],
+                winter: [
+                    { name: "우럭", temp: [5, 15], wind: [0, 20], reason: "겨울철 추운 수온에서도 활발한 어종", tips: ["갯지렁이나 작은 생선을 미끼로", "바위 지역에서 낚시", "조류가 있는 지역 선호"] },
+                    { name: "광어", temp: [6, 16], wind: [0, 18], reason: "겨울철 연안에서 활발한 어종", tips: ["갯지렁이나 새우를 미끼로", "모래 바닥 지역에서 낚시", "조류가 있는 지역 선호"] },
+                    { name: "돔", temp: [8, 18], wind: [0, 15], reason: "겨울철 수온에서도 활발", tips: ["새우나 갯지렁이를 미끼로", "얕은 바위 지역에서 낚시", "조류가 있는 지역 선호"] },
+                    { name: "전갱이", temp: [10, 20], wind: [0, 12], reason: "겨울철 수온에서도 활발한 어종", tips: ["새우나 작은 생선을 미끼로 사용", "얕은 바위 지역에서 낚시", "새벽과 저녁 시간대가 좋음"] },
+                    { name: "갈치", temp: [12, 22], wind: [0, 10], reason: "겨울철 회유 시기로 활발한 어종", tips: ["생선 조각이나 오징어를 미끼로", "깊은 바다에서 낚시", "조류가 강한 지역 선호"] }
+                ]
+            },
+            freshwater: {
+                spring: [
+                    { name: "배스", temp: [15, 25], wind: [0, 10], reason: "봄철 수온 상승과 함께 활발해지는 어종", tips: ["스피너베이트나 크랭크베이트 사용", "얕은 수초 지역에서 낚시", "새벽과 저녁 시간대가 좋음"] },
+                    { name: "블루길", temp: [12, 22], wind: [0, 12], reason: "봄철 산란기로 연안에 접근", tips: ["작은 지렁이나 밥벌레를 미끼로", "얕은 바위 지역에서 낚시", "조수 간만의 차가 큰 시간"] },
+                    { name: "붕어", temp: [10, 20], wind: [0, 15], reason: "봄철 수온 상승으로 활발해짐", tips: ["빵이나 옥수수를 미끼로", "얕은 수초 지역에서 낚시", "조류가 있는 지역 선호"] },
+                    { name: "잉어", temp: [14, 24], wind: [0, 10], reason: "봄철 산란기로 연안 접근", tips: ["옥수수나 빵을 미끼로", "얕은 바위 지역에서 낚시", "조수 간만의 차가 큰 시간"] },
+                    { name: "메기", temp: [16, 26], wind: [0, 8], reason: "봄철 수온 상승으로 활발해짐", tips: ["생선 조각이나 지렁이를 미끼로", "깊은 바위 지역에서 낚시", "조류가 강한 지역 선호"] }
+                ],
+                summer: [
+                    { name: "배스", temp: [20, 30], wind: [0, 12], reason: "여름철 높은 수온에서 활발한 어종", tips: ["스피너베이트나 크랭크베이트 사용", "얕은 수초 지역에서 낚시", "새벽과 저녁 시간대가 좋음"] },
+                    { name: "블루길", temp: [18, 28], wind: [0, 15], reason: "여름철 대량 회유하는 어종", tips: ["작은 지렁이나 밥벌레를 미끼로", "바위 지역에서 낚시", "조류가 있는 지역 선호"] },
+                    { name: "붕어", temp: [16, 26], wind: [0, 18], reason: "여름철 높은 수온에서 활발", tips: ["빵이나 옥수수를 미끼로", "얕은 수초 지역에서 낚시", "조류가 있는 지역 선호"] },
+                    { name: "잉어", temp: [20, 30], wind: [0, 12], reason: "여름철 높은 수온에서 활발", tips: ["옥수수나 빵을 미끼로", "얕은 바위 지역에서 낚시", "조류가 있는 지역 선호"] },
+                    { name: "메기", temp: [22, 32], wind: [0, 10], reason: "여름철 높은 수온에서 활발한 어종", tips: ["생선 조각이나 지렁이를 미끼로", "깊은 바위 지역에서 낚시", "조류가 강한 지역 선호"] }
+                ],
+                autumn: [
+                    { name: "배스", temp: [14, 24], wind: [0, 15], reason: "가을철 수온 하강과 함께 활발", tips: ["스피너베이트나 크랭크베이트 사용", "얕은 수초 지역에서 낚시", "새벽과 저녁 시간대가 좋음"] },
+                    { name: "블루길", temp: [12, 22], wind: [0, 18], reason: "가을철 수온 하강으로 활발해짐", tips: ["작은 지렁이나 밥벌레를 미끼로", "바위 지역에서 낚시", "조류가 있는 지역 선호"] },
+                    { name: "붕어", temp: [10, 20], wind: [0, 20], reason: "가을철 수온 하강으로 활발해짐", tips: ["빵이나 옥수수를 미끼로", "얕은 수초 지역에서 낚시", "조류가 있는 지역 선호"] },
+                    { name: "잉어", temp: [12, 22], wind: [0, 15], reason: "가을철 수온 하강으로 활발", tips: ["옥수수나 빵을 미끼로", "얕은 바위 지역에서 낚시", "조류가 있는 지역 선호"] },
+                    { name: "메기", temp: [14, 24], wind: [0, 12], reason: "가을철 수온 하강으로 활발해짐", tips: ["생선 조각이나 지렁이를 미끼로", "깊은 바위 지역에서 낚시", "조류가 강한 지역 선호"] }
+                ],
+                winter: [
+                    { name: "붕어", temp: [5, 15], wind: [0, 20], reason: "겨울철 추운 수온에서도 활발한 어종", tips: ["빵이나 옥수수를 미끼로", "얕은 수초 지역에서 낚시", "조류가 있는 지역 선호"] },
+                    { name: "잉어", temp: [6, 16], wind: [0, 18], reason: "겨울철 연안에서 활발한 어종", tips: ["옥수수나 빵을 미끼로", "얕은 바위 지역에서 낚시", "조류가 있는 지역 선호"] },
+                    { name: "메기", temp: [8, 18], wind: [0, 15], reason: "겨울철 수온에서도 활발", tips: ["생선 조각이나 지렁이를 미끼로", "깊은 바위 지역에서 낚시", "조류가 강한 지역 선호"] },
+                    { name: "배스", temp: [10, 20], wind: [0, 12], reason: "겨울철 수온에서도 활발한 어종", tips: ["스피너베이트나 크랭크베이트 사용", "얕은 수초 지역에서 낚시", "새벽과 저녁 시간대가 좋음"] },
+                    { name: "블루길", temp: [8, 18], wind: [0, 15], reason: "겨울철 수온에서도 활발한 어종", tips: ["작은 지렁이나 밥벌레를 미끼로", "바위 지역에서 낚시", "조류가 있는 지역 선호"] }
+                ]
+            }
+        };
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        function initializeApp() {
+            // Load saved theme
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.documentElement.setAttribute('data-theme', savedTheme);
+                updateThemeIcon(savedTheme);
+            } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                updateThemeIcon('dark');
+            }
+
+            // Initialize season display
+            updateSeasonDisplay();
+            
+            // Initialize tide display (with default coordinates for Seoul)
+            updateTideDisplay(37.5665, 126.9780);
+
+            // Load cached data
+            loadCache();
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+
+        function updateThemeIcon(theme) {
+            const icon = document.getElementById('theme-icon');
+            icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+
+        function getCurrentSeason() {
+            const now = new Date();
+            const month = now.getMonth() + 1; // 1-12
+            
+            if (month >= 3 && month <= 5) {
+                return { season: 'spring', name: '봄', emoji: '🌸' };
+            } else if (month >= 6 && month <= 8) {
+                return { season: 'summer', name: '여름', emoji: '☀️' };
+            } else if (month >= 9 && month <= 11) {
+                return { season: 'autumn', name: '가을', emoji: '🍂' };
+            } else {
+                return { season: 'winter', name: '겨울', emoji: '❄️' };
+            }
+        }
+
+        function updateSeasonDisplay() {
+            const currentSeason = getCurrentSeason();
+            const seasonDisplay = document.getElementById('season-display');
+            const seasonText = document.getElementById('current-season');
+            
+            seasonText.textContent = `${currentSeason.emoji} ${currentSeason.name}`;
+            seasonDisplay.className = `season-display ${currentSeason.season}`;
+            
+            return currentSeason.season;
+        }
+
+        function getTideNumber() {
+            // 현재 시간을 기반으로 1-15물 계산
+            const now = new Date();
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const timeInMinutes = hours * 60 + minutes;
+            
+            // 조석 주기는 약 12시간 25분 (745분)
+            // 15물로 나누면 각 물당 약 49.67분
+            const tideCycle = 745;
+            const tidePosition = (timeInMinutes % tideCycle) / tideCycle;
+            
+            // 1-15물로 변환 (1부터 시작)
+            const tideNumber = Math.floor(tidePosition * 15) + 1;
+            return tideNumber;
+        }
+
+        function getTideInfo(tideNumber) {
+            let tideStatus = "";
+            let tideDescription = "";
+            let fishingPrediction = "";
+            let emoji = "🎣";
+            let type = "";
+            let name = "";
+
+            switch (tideNumber) {
+                case 1:
+                case 2:
+                case 3:
+                    tideStatus = "낚시 좋음";
+                    tideDescription = "조류가 약해지고 있습니다. 낚시 활동이 활발합니다.";
+                    fishingPrediction = "좋은 조과를 기대할 수 있습니다. 🐟";
+                    type = "good";
+                    name = `${tideNumber}물 (낚시 좋음)`;
+                    emoji = "🐟";
+                    break;
+                case 4:
+                case 5:
+                case 6:
+                    tideStatus = "낚시 최적";
+                    tideDescription = "낚시의 '골든타임'입니다. 조류가 최적의 강도입니다.";
+                    fishingPrediction = "최고의 조과를 기대할 수 있습니다! 낚시하기 가장 좋은 시간입니다. ✨";
+                    type = "excellent";
+                    name = `${tideNumber}물 (낚시 최적)`;
+                    emoji = "✨";
+                    break;
+                case 7:
+                case 8:
+                case 9:
+                    tideStatus = "낚시 어려움 (사리)";
+                    tideDescription = "조류가 가장 강합니다. 채비 유지가 어렵습니다.";
+                    fishingPrediction = "조과 가능성이 낮습니다. 💧";
+                    type = "difficult";
+                    name = `${tideNumber}물 (사리)`;
+                    emoji = "💧";
+                    break;
+                case 10:
+                case 11:
+                case 12:
+                    tideStatus = "낚시 좋음";
+                    tideDescription = "조류가 다시 약해지고 있습니다. 낚시 활동이 증가합니다.";
+                    fishingPrediction = "좋은 조과를 기대할 수 있습니다. 🌊";
+                    type = "good";
+                    name = `${tideNumber}물 (낚시 좋음)`;
+                    emoji = "🌊";
+                    break;
+                case 13:
+                case 14:
+                case 15:
+                    tideStatus = "낚시 나쁨 (조금)";
+                    tideDescription = "조류가 가장 약합니다. 물고기 활동이 저조합니다.";
+                    fishingPrediction = "조과 가능성이 낮습니다. 😩";
+                    type = "poor";
+                    name = `${tideNumber}물 (조금)`;
+                    emoji = "😩";
+                    break;
+                default:
+                    tideStatus = "물때 정보 없음";
+                    tideDescription = "1-15물 사이의 숫자를 입력해주세요.";
+                    fishingPrediction = "알 수 없음";
+                    type = "unknown";
+                    name = "알 수 없음";
+                    emoji = "❓";
+                    break;
+            }
+
+            return {
+                tideNumber: tideNumber,
+                type: type,
+                name: name,
+                emoji: emoji,
+                status: tideStatus,
+                description: tideDescription,
+                fishingPrediction: fishingPrediction
+            };
+        }
+
+        function updateTideDisplay(lat, lon) {
+            const tideNumber = getTideNumber();
+            const tideInfo = getTideInfo(tideNumber);
+            const tideDisplay = document.getElementById('tide-display');
+            const tideText = document.getElementById('current-tide');
+            
+            tideText.textContent = `${tideInfo.emoji} ${tideInfo.name}`;
+            tideDisplay.className = `tide-display ${tideInfo.type}`;
+            tideDisplay.title = `${tideInfo.description} - ${tideInfo.fishingPrediction}`;
+            
+            return tideInfo;
+        }
+
+
+        function getLocation() {
+            const apiKey = '8d171e1d1c48996e78342e40530b6f57'; // 고정 API 키 사용
+            showLoading();
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        currentLocation = {
+                            lat: position.coords.latitude,
+                            lon: position.coords.longitude
+                        };
+                        updateTideDisplay(currentLocation.lat, currentLocation.lon);
+                        fetchWeatherData();
+                    },
+                    function(error) {
+                        console.error('Geolocation error:', error);
+                        showToast('위치 정보를 가져올 수 없습니다. 도시명을 입력해주세요.', 'error');
+                        showCityInput();
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 300000
+                    }
+                );
+            } else {
+                showToast('이 브라우저는 위치 서비스를 지원하지 않습니다.', 'error');
+                showCityInput();
+            }
+        }
+
+        function showCityInput() {
+            const cityInput = prompt('도시명을 입력해주세요 (예: Seoul, Busan):');
+            if (cityInput && cityInput.trim()) {
+                // Use geocoding to get coordinates
+                geocodeCity(cityInput.trim());
+            } else {
+                hideLoading();
+                showError('위치 정보가 필요합니다.');
+            }
+        }
+
+        function geocodeCity(cityName) {
+            const apiKey = '8d171e1d1c48996e78342e40530b6f57'; // 고정 API 키 사용
+            const geocodeUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(cityName)}&limit=1&appid=${apiKey}`;
+            
+            fetch(geocodeUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        currentLocation = {
+                            lat: data[0].lat,
+                            lon: data[0].lon,
+                            city: data[0].name,
+                            country: data[0].country
+                        };
+                        updateTideDisplay(currentLocation.lat, currentLocation.lon);
+                        fetchWeatherData();
+                    } else {
+                        throw new Error('도시를 찾을 수 없습니다.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Geocoding error:', error);
+                    showToast('도시를 찾을 수 없습니다. 다른 도시명을 시도해보세요.', 'error');
+                    hideLoading();
+                    showError('위치 정보를 가져올 수 없습니다.');
+                });
+        }
+
+        function fetchWeatherData() {
+            const apiKey = '8d171e1d1c48996e78342e40530b6f57'; // 고정 API 키 사용
+            const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${currentLocation.lat}&lon=${currentLocation.lon}&appid=${apiKey}&units=metric&lang=kr`;
+            
+            fetch(weatherUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    weatherData = {
+                        temperature: data.main.temp,
+                        windSpeed: data.wind.speed,
+                        weatherId: data.weather[0].id,
+                        description: data.weather[0].description,
+                        humidity: data.main.humidity,
+                        pressure: data.main.pressure,
+                        location: currentLocation.city || `${currentLocation.lat.toFixed(2)}, ${currentLocation.lon.toFixed(2)}`
+                    };
+                    
+                    pickSpecies();
+                    renderUI();
+                    saveCache();
+                    hideLoading();
+                })
+                .catch(error => {
+                    console.error('Weather API error:', error);
+                    let errorMessage = '날씨 정보를 가져올 수 없습니다.';
+                    let detailedMessage = '';
+                    
+                    if (error.message.includes('401')) {
+                        errorMessage = 'API 키가 유효하지 않습니다.';
+                        detailedMessage = 'OpenWeatherMap에서 API 키를 인식하지 못했습니다. 키가 올바른지 확인해주세요.';
+                    } else if (error.message.includes('429')) {
+                        errorMessage = 'API 호출 한도를 초과했습니다.';
+                        detailedMessage = '무료 플랜의 월 호출 한도(1,000회)를 초과했습니다. 다음 달까지 기다리거나 유료 플랜으로 업그레이드하세요.';
+                    } else if (error.message.includes('404')) {
+                        errorMessage = '위치를 찾을 수 없습니다.';
+                        detailedMessage = '입력한 위치 정보가 올바르지 않습니다. 다른 위치를 시도해보세요.';
+                    } else if (error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
+                        errorMessage = '네트워크 연결 오류';
+                        detailedMessage = '인터넷 연결을 확인하고 다시 시도해주세요.';
+                    } else {
+                        detailedMessage = `오류 상세: ${error.message}`;
+                    }
+                    
+                    showToast(errorMessage, 'error');
+                    hideLoading();
+                    showError(`${errorMessage}<br><small>${detailedMessage}</small>`);
+                });
+        }
+
+        function pickSpecies() {
+            const environment = document.getElementById('environment').value;
+            const season = getCurrentSeason().season; // 자동으로 현재 계절 감지
+            const temp = weatherData.temperature;
+            const windSpeed = weatherData.windSpeed;
+            const tideNumber = getTideNumber();
+            const tideInfo = getTideInfo(tideNumber);
+            
+            // Get fish list for current environment and season
+            const fishList = fishDatabase[environment][season];
+            
+            // Filter fish based on temperature and wind conditions
+            const suitableFish = fishList.filter(fish => {
+                const tempMatch = temp >= fish.temp[0] && temp <= fish.temp[1];
+                const windMatch = windSpeed >= fish.wind[0] && windSpeed <= fish.wind[1];
+                return tempMatch && windMatch;
+            });
+            
+            // If no fish match exactly, get the top 5 from the list
+            fishRecommendations = suitableFish.length > 0 ? 
+                suitableFish.slice(0, 5) : 
+                fishList.slice(0, 5);
+            
+            // Add tide-specific tips to fish recommendations
+            fishRecommendations = fishRecommendations.map(fish => ({
+                ...fish,
+                tideTip: getTideSpecificTip(fish.name, tideInfo.type, tideInfo.fishingPrediction)
+            }));
+        }
+
+        function getTideSpecificTip(fishName, tideType, fishingPrediction) {
+            const tideTips = {
+                'good': '조류가 약해져 낚시하기 좋은 시간입니다',
+                'excellent': '낚시의 골든타임! 최고의 조과를 기대할 수 있습니다',
+                'difficult': '사리로 조류가 강해 낚시가 어려운 시간입니다',
+                'poor': '조금으로 물고기 활동이 저조한 시간입니다'
+            };
+            
+            return tideTips[tideType] || fishingPrediction || '현재 물때에 맞는 낚시를 하세요';
+        }
+
+        function renderUI() {
+            // Get current tide info for display
+            const tideNumber = getTideNumber();
+            const tideInfo = getTideInfo(tideNumber);
+            
+            // Render weather card
+            const weatherCard = document.getElementById('weather-card');
+            const windWarning = weatherData.windSpeed >= 8 ? 
+                '<div class="warning">⚠️ 강풍 경보: 바람이 강합니다. 안전에 주의하세요.</div>' : '';
+            
+            const tideWarning = tideInfo.type === 'excellent' ? 
+                '<div class="warning" style="background: #FFFDE7; border-color: #FFD700; color: #F57F17;">✨ 낚시 골든타임! 현재가 최적의 낚시 시간입니다!</div>' : 
+                tideInfo.type === 'difficult' ? 
+                '<div class="warning" style="background: #FFEBEE; border-color: #F44336; color: #C62828;">💧 사리 시간: 조류가 강해 낚시가 어려운 시간입니다.</div>' : '';
+            
+            weatherCard.innerHTML = `
+                <div class="weather-header">
+                    <div class="location">📍 ${weatherData.location}</div>
+                    <div class="weather-description">${weatherData.description}</div>
+                </div>
+                ${windWarning}
+                ${tideWarning}
+                <div class="weather-main">
+                    <div class="weather-item">
+                        <div class="weather-value">${Math.round(weatherData.temperature)}°C</div>
+                        <div class="weather-label">온도</div>
+                    </div>
+                    <div class="weather-item">
+                        <div class="weather-value">${weatherData.windSpeed} m/s</div>
+                        <div class="weather-label">풍속</div>
+                    </div>
+                    <div class="weather-item">
+                        <div class="weather-value">${weatherData.humidity}%</div>
+                        <div class="weather-label">습도</div>
+                    </div>
+                    <div class="weather-item">
+                        <div class="weather-value">${weatherData.pressure} hPa</div>
+                        <div class="weather-label">기압</div>
+                    </div>
+                </div>
+                <div class="tide-info">
+                    <h4>🌊 현재 물때 정보</h4>
+                    <p><strong>${tideInfo.name}</strong> - ${tideInfo.description}</p>
+                    <p><em>${tideInfo.fishingPrediction}</em></p>
+                </div>
+            `;
+            
+            // Render fish recommendations
+            const fishGrid = document.getElementById('fish-grid');
+            fishGrid.innerHTML = fishRecommendations.map(fish => `
+                <div class="fish-card">
+                    <h3 class="fish-name">${fish.name}</h3>
+                    <p class="fish-reason">${fish.reason}</p>
+                    <div class="fish-tips">
+                        <h4>낚시 팁</h4>
+                        <ul>
+                            ${fish.tips.map(tip => `<li>${tip}</li>`).join('')}
+                        </ul>
+                        ${fish.tideTip ? `<div class="tide-tip"><strong>🌊 물때 팁:</strong> ${fish.tideTip}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+            
+            // Show content
+            document.getElementById('content').classList.remove('hidden');
+            document.getElementById('error-message').classList.add('hidden');
+        }
+
+        function showLoading() {
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('content').classList.add('hidden');
+            document.getElementById('error-message').classList.add('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.add('hidden');
+        }
+
+        function showError(message) {
+            document.getElementById('error-text').innerHTML = message;
+            document.getElementById('error-message').classList.remove('hidden');
+            document.getElementById('content').classList.add('hidden');
+        }
+
+        function retry() {
+            if (currentLocation) {
+                fetchWeatherData();
+            } else {
+                getLocation();
+            }
+        }
+
+        function refreshData() {
+            if (currentLocation) {
+                fetchWeatherData();
+            } else {
+                getLocation();
+            }
+        }
+
+        function copyLink() {
+            if (!currentLocation || !weatherData) {
+                showToast('복사할 데이터가 없습니다.', 'error');
+                return;
+            }
+            
+            const environment = document.getElementById('environment').value;
+            const url = `${window.location.origin}${window.location.pathname}?lat=${currentLocation.lat}&lon=${currentLocation.lon}&env=${environment}`;
+            
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('링크가 클립보드에 복사되었습니다!', 'success');
+            }).catch(() => {
+                showToast('링크 복사에 실패했습니다.', 'error');
+            });
+        }
+
+        function saveCache() {
+            if (currentLocation && weatherData && fishRecommendations) {
+                const cacheData = {
+                    location: currentLocation,
+                    weather: weatherData,
+                    fish: fishRecommendations,
+                    timestamp: Date.now(),
+                    environment: document.getElementById('environment').value,
+                    season: getCurrentSeason().season
+                };
+                localStorage.setItem('fishFinderCache', JSON.stringify(cacheData));
+            }
+        }
+
+        function loadCache() {
+            const cached = localStorage.getItem('fishFinderCache');
+            if (cached) {
+                try {
+                    const cacheData = JSON.parse(cached);
+                    const now = Date.now();
+                    
+                    // Check if cache is still valid (within TTL)
+                    if (now - cacheData.timestamp < CACHE_TTL) {
+                        currentLocation = cacheData.location;
+                        weatherData = cacheData.weather;
+                        fishRecommendations = cacheData.fish;
+                        
+                        // Restore UI state
+                        document.getElementById('environment').value = cacheData.environment;
+                        
+                        renderUI();
+                        showToast('캐시된 데이터를 불러왔습니다.', 'success');
+                        return;
+                    } else {
+                        // Cache expired, remove it
+                        localStorage.removeItem('fishFinderCache');
+                    }
+                } catch (error) {
+                    console.error('Cache load error:', error);
+                    localStorage.removeItem('fishFinderCache');
+                }
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            // Remove existing toasts
+            const existingToasts = document.querySelectorAll('.toast');
+            existingToasts.forEach(toast => toast.remove());
+            
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <div class="toast-header">
+                    <strong>${type === 'error' ? '오류' : type === 'success' ? '성공' : '알림'}</strong>
+                    <button class="toast-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
+                </div>
+                <div>${message}</div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            // Show toast
+            setTimeout(() => toast.classList.add('show'), 100);
+            
+            // Auto hide after 5 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+
+        // Handle URL parameters for sharing
+        function handleUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const lat = urlParams.get('lat');
+            const lon = urlParams.get('lon');
+            const env = urlParams.get('env');
+            
+            if (lat && lon) {
+                currentLocation = {
+                    lat: parseFloat(lat),
+                    lon: parseFloat(lon)
+                };
+                
+                if (env) document.getElementById('environment').value = env;
+                
+                // API 키는 고정값이므로 바로 호출 가능
+                fetchWeatherData();
+            }
+        }
+
+        // Initialize URL params handling
+        document.addEventListener('DOMContentLoaded', function() {
+            handleUrlParams();
+        });
+    </script>
+</body>
+</html>
